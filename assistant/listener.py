@@ -11,7 +11,12 @@ import threading
 class Listener:
     """Continuous speech listener with wake word detection."""
     
-    WAKE_WORD = "cj"
+    # "Hey Simon" variants - primary wake word
+    WAKE_WORDS = [
+        "hey simon", "hey saimon", "hey symon",
+        "a simon", "hey seaman", "hey semen",
+        "simon", "saimon", "symon",
+    ]
     
     def __init__(
         self,
@@ -54,7 +59,6 @@ class Listener:
                 if text:
                     self._process_text(text)
             except sr.UnknownValueError:
-                # Speech not understood, continue listening
                 pass
             except sr.RequestError as e:
                 if self.on_error:
@@ -75,14 +79,24 @@ class Listener:
     
     def _process_text(self, text: str) -> None:
         """Process transcribed text, checking for wake word."""
-        # Check if wake word is present
-        if self.WAKE_WORD in text:
+        # Check if any wake word is present
+        detected_wake = None
+        for wake in self.WAKE_WORDS:
+            if wake in text:
+                detected_wake = wake
+                break
+        
+        if detected_wake:
             if self.on_wake:
                 self.on_wake()
             
             # Extract command after wake word
-            parts = text.split(self.WAKE_WORD, 1)
+            parts = text.split(detected_wake, 1)
             command = parts[1].strip() if len(parts) > 1 else ""
+            
+            # Remove common filler words after wake word
+            for filler in [",", ".", "please", "can you", "could you"]:
+                command = command.lstrip(filler).strip()
             
             # If no command after wake word, listen for follow-up
             if not command:

@@ -1,41 +1,76 @@
 """
-Text-to-speech module using pyttsx3.
-Provides offline speech synthesis.
+Text-to-speech module using Piper TTS.
+High-quality neural text-to-speech that runs locally.
 """
 
-import pyttsx3
+import subprocess
 import threading
-from typing import Optional
+import os
+import tempfile
+import wave
 
 
 class Speaker:
-    """Text-to-speech using pyttsx3."""
+    """Text-to-speech using Piper TTS."""
     
-    def __init__(self, rate: int = 175, voice_index: int = 0):
+    def __init__(self, model_path: str = None):
         """
         Initialize speaker.
         
         Args:
-            rate: Speech rate (words per minute). Default 175.
-            voice_index: Index of voice to use. 0 = first available.
+            model_path: Path to Piper ONNX model. If None, uses default voice.
         """
-        self._engine = pyttsx3.init()
-        self._engine.setProperty("rate", rate)
+        # Default to the bundled voice model
+        if model_path is None:
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            model_path = os.path.join(base_dir, "voices", "en_US-lessac-medium.onnx")
         
-        # Set voice if available
-        voices = self._engine.getProperty("voices")
-        if voices and voice_index < len(voices):
-            self._engine.setProperty("voice", voices[voice_index].id)
-        
+        self.model_path = model_path
         self._lock = threading.Lock()
     
     def speak(self, text: str) -> None:
-        """Speak text synchronously."""
+        """Speak text synchronously using Piper."""
         with self._lock:
-            self._engine.say(text)
-            self._engine.runAndWait()
+            try:
+                # Create a temp file for the audio
+                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                    temp_file = f.name
+                
+                # Run piper to generate audio
+                result = subprocess.run(
+                    ["piper", "--model", self.model_path, "--output_file", temp_file],
+                    input=text,
+                    text=True,
+                    capture_output=True
+                )
+                
+                if result.returncode == 0 and os.path.exists(temp_file):
+                    # Play the audio using Windows built-in player
+                    self._play_audio(temp_file)
+                
+                # Clean up temp file
+                if os.path.exists(temp_file):
+                    os.unlink(temp_file)
+                    
+            except Exception as e:
+                print(f"[Speaker] Error: {e}")
     
-    def speak_async(self, text: str, on_complete: Optional[callable] = None) -> None:
+    def _play_audio(self, file_path: str) -> None:
+        """Play audio file using Windows."""
+        try:
+            # Use PowerShell to play audio (works on Windows)
+            subprocess.run(
+                ["powershell", "-c", f"(New-Object Media.SoundPlayer '{file_path}').PlaySync()"],
+                capture_output=True
+            )
+        except Exception:
+            # Fallback: try with the start command
+            try:
+                subprocess.run(["cmd", "/c", f"start /wait {file_path}"], capture_output=True)
+            except Exception:
+                pass
+    
+    def speak_async(self, text: str, on_complete=None) -> None:
         """Speak text in background thread."""
         def _speak():
             self.speak(text)
@@ -44,15 +79,3 @@ class Speaker:
         
         thread = threading.Thread(target=_speak, daemon=True)
         thread.start()
-    
-    def stop(self) -> None:
-        """Stop current speech."""
-        self._engine.stop()
-    
-    def set_rate(self, rate: int) -> None:
-        """Set speech rate."""
-        self._engine.setProperty("rate", rate)
-    
-    def set_volume(self, volume: float) -> None:
-        """Set volume (0.0 to 1.0)."""
-        self._engine.setProperty("volume", max(0.0, min(1.0, volume)))

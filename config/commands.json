@@ -1,0 +1,12 @@
+{
+  "goodnight": [
+    { "action": "lock_screen", "target": null },
+    { "action": "volume_mute", "target": null }
+  ],
+  "morning": [
+    { "action": "open_url", "target": "https://weather.com" },
+    { "action": "open_app", "target": "chrome" }
+  ],
+  "focus mode": [{ "action": "volume_set", "target": "20" }],
+  "break": [{ "action": "open_url", "target": "https://youtube.com" }]
+}
