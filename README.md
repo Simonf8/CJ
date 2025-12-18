@@ -1,74 +1,72 @@
 # Simon - Personal Voice Assistant
 
-A Jarvis-like desktop voice assistant with push-to-talk activation.
-
-![Simon Demo](assets/demo.gif)
+A Jarvis-like desktop voice assistant with push-to-talk activation, powered by local LLM.
 
 ## Features
 
-- **Push-to-Talk**: Press `Ctrl+Space` to activate
-- **Jarvis Voice**: ONNX-based TTS with Marvel Jarvis voice
-- **Local LLM**: Uses Ollama for command understanding (no cloud AI)
-- **Desktop Actions**: Open apps, files, URLs, control volume, media
-- **Custom Commands**: Define shortcuts in `config/commands.json`
-- **Transparent Hologram UI**: Floating animated hologram display
-- **System Tray**: Runs in background with tray menu
+- **Push-to-Talk**: Press `Ctrl+Space` to activate (mic not always on)
+- **Natural Voice**: Microsoft Neural TTS (Ryan - British male)
+- **Local AI**: Uses Ollama for command understanding (privacy-focused)
+- **Hologram UI**: Animated transparent popup
+- **Desktop Actions**:
+  - Open apps, files, URLs
+  - Control volume and media
+  - Search Google/YouTube
+  - Lock screen, screenshot
+  - Shutdown, restart, sleep
+- **Custom Commands**: Define your own shortcuts
+- **System Tray**: Runs quietly in background
+- **Auto-Start**: Optional startup with Windows
 
 ## Requirements
 
-- Python 3.10+
-- [Ollama](https://ollama.com/) with a model installed
 - Windows 10/11
+- Python 3.10+
+- [Ollama](https://ollama.com/) with a model (e.g., `llama3.2`)
 - Microphone
+- Internet (for Edge TTS voice)
 
 ## Installation
 
-1. **Clone the repository**
+```bash
+# Clone the repo
+git clone https://github.com/Simonf8/CJ.git
+cd CJ
 
-   ```bash
-   git clone https://github.com/yourusername/simon-assistant.git
-   cd simon-assistant
-   ```
+# Install dependencies
+pip install -r requirements.txt
 
-2. **Install dependencies**
+# Install Ollama and pull a model
+# Download from https://ollama.com/download
+ollama pull llama3.2
 
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Install Ollama and a model**
-
-   ```bash
-   # Download from https://ollama.com/download
-   ollama pull llama3.2
-   ```
-
-4. **Run Simon**
-   ```bash
-   python main.py
-   ```
+# Run Simon
+python main.py
+```
 
 ## Usage
 
-1. Press `Ctrl+Space` to activate Simon
+1. Press **Ctrl+Space** to activate Simon
 2. Speak your command
-3. Simon will respond and take action
+3. Simon responds and takes action
 
 ### Example Commands
 
-| Command                    | Action                        |
-| -------------------------- | ----------------------------- |
-| "Open Chrome"              | Opens Google Chrome           |
-| "What time is it?"         | Tells current time            |
-| "Search YouTube for music" | Opens YouTube search          |
-| "Turn up the volume"       | Increases system volume       |
-| "Lock my computer"         | Locks Windows                 |
-| "Take a screenshot"        | Saves screenshot to Downloads |
-| "Goodnight"                | Custom: locks + mutes         |
+| Command                    | Action                |
+| -------------------------- | --------------------- |
+| "Open Chrome"              | Opens browser         |
+| "What time is it?"         | Tells current time    |
+| "Search YouTube for music" | Opens YouTube search  |
+| "Turn up the volume"       | Increases volume      |
+| "Lock my computer"         | Locks Windows         |
+| "Take a screenshot"        | Saves to Downloads    |
+| "Shut down"                | Shuts down PC in 5s   |
+| "Go to sleep"              | Puts PC to sleep      |
+| "Goodnight"                | Custom: locks + mutes |
 
 ### Custom Commands
 
-Edit `config/commands.json` to add your own shortcuts:
+Edit `config/commands.json`:
 
 ```json
 {
@@ -86,21 +84,20 @@ Edit `config/commands.json` to add your own shortcuts:
 ## Project Structure
 
 ```
-simon-assistant/
-├── main.py              # Entry point
-├── requirements.txt     # Python dependencies
-├── config/
-│   └── commands.json    # Custom commands
-├── voices/
-│   └── jarvis.onnx      # Jarvis voice model
+CJ/
+├── main.py              # Entry point (push-to-talk)
+├── Start Simon.bat      # Quick launcher
+├── requirements.txt
+├── config/commands.json # Custom commands
+├── omega-aco.gif        # Hologram animation
 ├── assistant/
-│   ├── brain.py         # Ollama LLM integration
+│   ├── brain.py         # Ollama LLM
 │   ├── executor.py      # Action execution
-│   ├── speaker.py       # Piper TTS
+│   ├── speaker.py       # Edge TTS (Ryan voice)
 │   ├── memory.py        # Conversation context
 │   └── commands.py      # Custom commands
 ├── ui/
-│   ├── popup.py         # Hologram UI
+│   ├── popup.py         # Hologram popup
 │   └── tray.py          # System tray
 └── utils/
     └── startup.py       # Auto-start utility
@@ -108,7 +105,7 @@ simon-assistant/
 
 ## Configuration
 
-### Change Ollama Model
+### Change LLM Model
 
 ```bash
 python main.py llama3.2:70b
@@ -121,6 +118,26 @@ from utils.startup import enable_startup
 enable_startup()
 ```
 
+### Change Voice
+
+Edit `assistant/speaker.py` and change `VOICE`:
+
+```python
+VOICE = "en-US-GuyNeural"  # American male
+# or
+VOICE = "en-GB-RyanNeural"  # British male (default)
+```
+
+## Credits
+
+- **Ollama** - Local LLM runtime
+- **Edge TTS** - Microsoft neural voices
+- **CustomTkinter** - Modern UI
+
 ## License
 
-MIT License
+MIT License - feel free to use and modify!
+
+---
+
+Made by [@Simonf8](https://github.com/Simonf8)
