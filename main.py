@@ -1,28 +1,23 @@
 """
-CJ - Personal Voice Assistant
+Simon - Personal Voice Assistant
 
-Main entry point that orchestrates all components:
-- Background listener for wake word detection
-- Popup UI for visual feedback
-- Ollama brain for command understanding
-- Executor for desktop actions
-- Speaker for voice responses
-- System tray for background operation
+Push-to-talk mode: Press Ctrl+Space to activate.
 """
 
 import threading
 import sys
+import keyboard
 
-from assistant.listener import Listener
 from assistant.brain import Brain
 from assistant.executor import Executor
 from assistant.speaker import Speaker
+from assistant.listener import Listener
 from ui.popup import PopupWindow
 from ui.tray import SystemTray
 
 
-class CJ:
-    """Main CJ assistant orchestrator."""
+class Simon:
+    """Main Simon assistant with push-to-talk."""
     
     def __init__(self, model: str = "llama3.2"):
         self.brain = Brain(model=model)
@@ -34,81 +29,100 @@ class CJ:
             on_toggle_listening=self._on_toggle_listening,
             on_show_popup=self._on_show_popup
         )
-        self.listener: Listener = None
         self._processing = False
-        self._listening = True
+        self._enabled = True
+        self._recognizer = None
+        self._microphone = None
+    
+    def _init_speech(self):
+        """Initialize speech recognition."""
+        import speech_recognition as sr
+        self._recognizer = sr.Recognizer()
+        self._microphone = sr.Microphone()
+        with self._microphone as source:
+            self._recognizer.adjust_for_ambient_noise(source, duration=0.5)
     
     def _on_quit(self) -> None:
-        """Handle quit from tray."""
-        print("[CJ] Quitting...")
-        if self.listener:
-            self.listener.stop()
+        """Handle quit."""
+        print("[Simon] Quitting...")
+        keyboard.unhook_all()
         self.popup.quit()
     
-    def _on_toggle_listening(self, listening: bool) -> None:
-        """Handle toggle listening from tray."""
-        self._listening = listening
-        if listening:
-            print("[CJ] Resumed listening")
-        else:
-            print("[CJ] Paused listening")
+    def _on_toggle_listening(self, enabled: bool) -> None:
+        """Handle toggle from tray."""
+        self._enabled = enabled
+        status = "enabled" if enabled else "disabled"
+        print(f"[Simon] Push-to-talk {status}")
     
     def _on_show_popup(self) -> None:
         """Handle show popup from tray."""
         self.popup.show()
     
-    def _on_wake(self) -> None:
-        """Called when wake word is detected."""
-        if not self._listening:
-            return
-        print("[CJ] Wake word detected!")
-        self.popup.show()
-    
-    def _on_command(self, command: str) -> None:
-        """Called when a command is received after wake word."""
-        if not self._listening or self._processing:
+    def _on_hotkey(self) -> None:
+        """Called when Ctrl+Space is pressed."""
+        if not self._enabled or self._processing:
             return
         
+        print("[Simon] Activated! Listening...")
         self._processing = True
-        print(f"[CJ] Command: {command}")
         
-        # Update UI
-        self.popup.set_status("Processing...")
-        self.popup.set_text(f'"{command}"')
+        # Run in thread to not block hotkey handler
+        thread = threading.Thread(target=self._process_command, daemon=True)
+        thread.start()
+    
+    def _process_command(self) -> None:
+        """Listen for and process a command."""
+        import speech_recognition as sr
+        
+        self.popup.show()
+        self.popup.set_status("Listening...")
+        self.popup.set_text("")
         
         try:
-            # Process with Ollama
-            action = self.brain.process(command)
-            print(f"[CJ] Action: {action}")
+            with self._microphone as source:
+                audio = self._recognizer.listen(source, timeout=5, phrase_time_limit=10)
             
-            # Handle custom commands (multiple actions)
+            self.popup.set_status("Processing...")
+            
+            try:
+                command = self._recognizer.recognize_google(audio).lower()
+                print(f"[Simon] Command: {command}")
+                self.popup.set_text(f'"{command}"')
+            except sr.UnknownValueError:
+                self.popup.set_text("Didn't catch that")
+                self.popup.set_speaking(True)
+                self.speaker.speak("Sorry, I didn't catch that.")
+                self.popup.set_speaking(False)
+                self._processing = False
+                self.popup.hide_after(1500)
+                return
+            
+            # Process with brain
+            action = self.brain.process(command)
+            print(f"[Simon] Action: {action}")
+            
+            # Handle custom commands
             if action["action"] == "custom":
-                actions_list = action["target"]
-                for sub_action in actions_list:
+                for sub_action in action["target"]:
                     self.executor.execute(sub_action["action"], sub_action.get("target"))
                 response = action["response"]
             else:
-                # Execute single action
                 if action["action"] != "speak":
                     success = self.executor.execute(action["action"], action["target"])
                     if not success:
-                        action["response"] = f"Sorry, I couldn't do that"
+                        action["response"] = "Sorry, I couldn't do that"
                 response = action["response"]
             
-            # Show response and speak with mouth animation
+            # Speak response
             self.popup.set_status("Speaking...")
             self.popup.set_text(response)
             self.popup.set_speaking(True)
-            
-            # Speak response
             self.speaker.speak(response)
-            
-            # Stop mouth animation after speaking
             self.popup.set_speaking(False)
             
         except Exception as e:
-            print(f"[CJ] Error: {e}")
-            self.popup.set_text(f"Error: {e}")
+            print(f"[Simon] Error: {e}")
+            self.popup.set_text("Error occurred")
             self.popup.set_speaking(True)
             self.speaker.speak("Sorry, something went wrong.")
             self.popup.set_speaking(False)
@@ -117,45 +131,38 @@ class CJ:
             self._processing = False
             self.popup.hide_after(2000)
     
-    def _on_error(self, error: str) -> None:
-        """Called on listener errors."""
-        print(f"[CJ] Error: {error}")
-    
     def run(self) -> None:
         """Start the assistant."""
         print("=" * 50)
         print("  Simon - Personal Voice Assistant")
         print("=" * 50)
-        print("Say 'Hey Simon' followed by your command.")
+        print("Press Ctrl+Space to activate.")
         print("Examples:")
-        print("  - 'Hey Simon, open Chrome'")
-        print("  - 'Hey Simon, what time is it?'")
-        print("  - 'Hey Simon, search YouTube for music'")
-        print("  - 'Hey Simon, turn up the volume'")
-        print("  - 'Hey Simon, goodnight' (custom command)")
+        print("  - 'Open Chrome'")
+        print("  - 'What time is it?'")
+        print("  - 'Search YouTube for music'")
+        print("  - 'Turn up the volume'")
+        print("  - 'Goodnight' (custom command)")
         print("=" * 50)
         print("Running in system tray...\n")
+        
+        # Initialize speech recognition
+        self._init_speech()
+        
+        # Register hotkey
+        keyboard.add_hotkey('ctrl+space', self._on_hotkey)
+        print("[Simon] Hotkey registered: Ctrl+Space")
         
         # Start system tray
         self.tray.start()
         
-        # Create listener
-        self.listener = Listener(
-            on_wake=self._on_wake,
-            on_command=self._on_command,
-            on_error=self._on_error
-        )
-        
-        # Start listener in background
-        self.listener.start()
-        
-        # Run UI in main thread (required by tkinter)
+        # Run UI in main thread
         try:
             self.popup.run()
         except KeyboardInterrupt:
-            print("\n[CJ] Shutting down...")
+            print("\n[Simon] Shutting down...")
         finally:
-            self.listener.stop()
+            keyboard.unhook_all()
             self.tray.stop()
 
 
@@ -166,7 +173,7 @@ def main():
         model = sys.argv[1]
         print(f"Using model: {model}")
     
-    assistant = CJ(model=model)
+    assistant = Simon(model=model)
     assistant.run()
 
 

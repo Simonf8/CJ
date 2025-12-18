@@ -1,5 +1,24 @@
-SpeechRecognition==3.10.4
+# Core
+SpeechRecognition==3.14.4
 PyAudio==0.2.14
-pyttsx3==2.90
-ollama==0.3.3
+pyttsx3==2.99
+ollama==0.6.1
+
+# TTS
+piper-tts==1.3.0
+
+# UI
 customtkinter==5.2.2
+Pillow==11.3.0
+pystray==0.19.5
+
+# Hotkeys and Automation
+keyboard==0.13.5
+PyAutoGUI==0.9.54
+
+# Audio Control
+pycaw==20251023
+comtypes==1.4.14
+
+# Video/Image Processing
+opencv-python==4.12.0.88

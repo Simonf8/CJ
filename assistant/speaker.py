@@ -1,72 +1,74 @@
 """
-Text-to-speech module using Piper TTS.
-High-quality neural text-to-speech that runs locally.
+Text-to-speech module using Edge TTS.
+High-quality Microsoft neural voice (Ryan - British male).
 """
 
+import asyncio
 import subprocess
 import threading
 import os
 import tempfile
-import wave
+import time
 
 
 class Speaker:
-    """Text-to-speech using Piper TTS."""
+    """Text-to-speech using Edge TTS."""
     
-    def __init__(self, model_path: str = None):
-        """
-        Initialize speaker.
-        
-        Args:
-            model_path: Path to Piper ONNX model. If None, uses default voice.
-        """
-        # Default to the bundled voice model
-        if model_path is None:
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            model_path = os.path.join(base_dir, "voices", "en_US-lessac-medium.onnx")
-        
-        self.model_path = model_path
+    # Ryan - British male voice
+    VOICE = "en-GB-RyanNeural"
+    
+    def __init__(self):
         self._lock = threading.Lock()
     
     def speak(self, text: str) -> None:
-        """Speak text synchronously using Piper."""
+        """Speak text synchronously using Edge TTS."""
         with self._lock:
             try:
-                # Create a temp file for the audio
-                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
-                    temp_file = f.name
-                
-                # Run piper to generate audio
-                result = subprocess.run(
-                    ["piper", "--model", self.model_path, "--output_file", temp_file],
-                    input=text,
-                    text=True,
-                    capture_output=True
-                )
-                
-                if result.returncode == 0 and os.path.exists(temp_file):
-                    # Play the audio using Windows built-in player
-                    self._play_audio(temp_file)
-                
-                # Clean up temp file
-                if os.path.exists(temp_file):
-                    os.unlink(temp_file)
-                    
+                asyncio.run(self._speak_async(text))
             except Exception as e:
                 print(f"[Speaker] Error: {e}")
     
-    def _play_audio(self, file_path: str) -> None:
-        """Play audio file using Windows."""
+    async def _speak_async(self, text: str) -> None:
+        """Generate and play speech."""
+        import edge_tts
+        
+        # Create temp file
+        temp_file = os.path.join(tempfile.gettempdir(), "simon_tts.mp3")
+        
         try:
-            # Use PowerShell to play audio (works on Windows)
-            subprocess.run(
-                ["powershell", "-c", f"(New-Object Media.SoundPlayer '{file_path}').PlaySync()"],
-                capture_output=True
+            # Generate speech
+            communicate = edge_tts.Communicate(text, self.VOICE)
+            await communicate.save(temp_file)
+            
+            # Play audio
+            if os.path.exists(temp_file) and os.path.getsize(temp_file) > 0:
+                self._play_audio(temp_file)
+        finally:
+            # Clean up
+            if os.path.exists(temp_file):
+                try:
+                    os.unlink(temp_file)
+                except Exception:
+                    pass
+    
+    def _play_audio(self, file_path: str) -> None:
+        """Play audio file on Windows using ffplay or fallback."""
+        try:
+            # Try using start command which opens default player and waits
+            result = subprocess.run(
+                f'powershell -c "Add-Type -AssemblyName presentationCore; $p = New-Object System.Windows.Media.MediaPlayer; $p.Open(\'{file_path}\'); Start-Sleep -Milliseconds 300; $p.Play(); while($p.Position.TotalSeconds -lt $p.NaturalDuration.TimeSpan.TotalSeconds -and $p.NaturalDuration.HasTimeSpan){{Start-Sleep -Milliseconds 100}}; $p.Close()"',
+                shell=True,
+                capture_output=True,
+                timeout=30
             )
-        except Exception:
-            # Fallback: try with the start command
+        except subprocess.TimeoutExpired:
+            pass
+        except Exception as e:
+            print(f"[Speaker] Playback error: {e}")
+            # Fallback: just open the file
             try:
-                subprocess.run(["cmd", "/c", f"start /wait {file_path}"], capture_output=True)
+                os.startfile(file_path)
+                time.sleep(3)
             except Exception:
                 pass
     
