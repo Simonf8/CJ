@@ -42,6 +42,9 @@ Available actions:
 - "media_prev": Previous track. Target = null
 - "lock_screen": Lock the computer. Target = null
 - "screenshot": Take a screenshot. Target = null
+- "shutdown": Shut down the computer. Target = null
+- "restart": Restart the computer. Target = null
+- "sleep": Put computer to sleep. Target = null
 - "speak": Just respond verbally. Target = null
 
 Examples:
@@ -51,6 +54,8 @@ User: "turn up the volume" -> {"action": "volume_up", "target": null, "response"
 User: "what time is it" -> {"action": "speak", "target": null, "response": "It's 3:45 PM"}
 User: "lock my computer" -> {"action": "lock_screen", "target": null, "response": "Locking your computer"}
 User: "take a screenshot" -> {"action": "screenshot", "target": null, "response": "Taking a screenshot"}
+User: "shut down" -> {"action": "shutdown", "target": null, "response": "Shutting down in 5 seconds"}
+User: "restart computer" -> {"action": "restart", "target": null, "response": "Restarting in 5 seconds"}
 
 Be concise and helpful. Use context from previous messages when relevant.
 """

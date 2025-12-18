@@ -91,6 +91,9 @@ class Executor:
             "media_prev": lambda t: self._media_control("prev"),
             "lock_screen": lambda t: self._lock_screen(),
             "screenshot": lambda t: self._take_screenshot(),
+            "shutdown": lambda t: self._power_control("shutdown"),
+            "restart": lambda t: self._power_control("restart"),
+            "sleep": lambda t: self._power_control("sleep"),
             "speak": lambda t: True,
         }
         
@@ -268,3 +271,19 @@ class Executor:
             return True
         except Exception:
             return False
+    
+    def _power_control(self, action: str) -> bool:
+        """Control power state: shutdown, restart, sleep."""
+        try:
+            if action == "shutdown":
+                subprocess.run("shutdown /s /t 5", shell=True)
+            elif action == "restart":
+                subprocess.run("shutdown /r /t 5", shell=True)
+            elif action == "sleep":
+                # Put computer to sleep using shutdown /h for hibernate
+                # or use rundll32 with different params
+                os.system('rundll32.exe powrprof.dll,SetSuspendState Sleep')
+            return True
+        except Exception:
+            return False
+
