@@ -4,17 +4,16 @@ High-quality Microsoft neural voice (Ryan - British male).
 """
 
 import asyncio
-import subprocess
-import threading
 import os
 import tempfile
+import threading
 import time
 
 
 class Speaker:
     """Text-to-speech using Edge TTS."""
     
-    # Ryan - British male voice
+    # British male voice
     VOICE = "en-GB-RyanNeural"
     
     def __init__(self):
@@ -32,43 +31,42 @@ class Speaker:
         """Generate and play speech."""
         import edge_tts
         
-        # Create temp file
         temp_file = os.path.join(tempfile.gettempdir(), "simon_tts.mp3")
         
         try:
-            # Generate speech
             communicate = edge_tts.Communicate(text, self.VOICE)
             await communicate.save(temp_file)
             
-            # Play audio
             if os.path.exists(temp_file) and os.path.getsize(temp_file) > 0:
                 self._play_audio(temp_file)
         finally:
-            # Clean up
-            if os.path.exists(temp_file):
-                try:
-                    os.unlink(temp_file)
-                except Exception:
-                    pass
+            self._cleanup_file(temp_file)
     
     def _play_audio(self, file_path: str) -> None:
-        """Play audio file on Windows using ffplay or fallback."""
+        """Play audio file using pygame."""
         try:
-            # Try using start command which opens default player and waits
-            result = subprocess.run(
-                f'powershell -c "Add-Type -AssemblyName presentationCore; $p = New-Object System.Windows.Media.MediaPlayer; $p.Open(\'{file_path}\'); Start-Sleep -Milliseconds 300; $p.Play(); while($p.Position.TotalSeconds -lt $p.NaturalDuration.TimeSpan.TotalSeconds -and $p.NaturalDuration.HasTimeSpan){{Start-Sleep -Milliseconds 100}}; $p.Close()"',
-                shell=True,
-                capture_output=True,
-                timeout=30
-            )
-        except subprocess.TimeoutExpired:
-            pass
+            import pygame
+            pygame.mixer.init()
+            pygame.mixer.music.load(file_path)
+            pygame.mixer.music.play()
+            
+            while pygame.mixer.music.get_busy():
+                time.sleep(0.1)
+            
+            pygame.mixer.quit()
         except Exception as e:
             print(f"[Speaker] Playback error: {e}")
-            # Fallback: just open the file
             try:
                 os.startfile(file_path)
                 time.sleep(3)
+            except Exception:
+                pass
+    
+    def _cleanup_file(self, file_path: str) -> None:
+        """Remove temporary file."""
+        if os.path.exists(file_path):
+            try:
+                os.unlink(file_path)
             except Exception:
                 pass
     
