@@ -72,7 +72,7 @@ You can use informal language and be friendly. Call the user by name if you know
 class Brain:
     """Ollama-powered command processor with memory and custom commands."""
     
-    def __init__(self, model: str = "qwen2.5:7b"):
+    def __init__(self, model: str = "llama3.2"):
         self.model = model
         self.client = ollama.Client()
         self.memory = Memory(max_messages=30)  # Longer conversation memory
@@ -160,12 +160,31 @@ class Brain:
         try:
             content = content.strip()
             
+            # Remove markdown code blocks
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
                 content = content.split("```")[1].split("```")[0]
             
-            data = json.loads(content.strip())
+            content = content.strip()
+            
+            # Handle multiple JSON objects - take only the first one
+            if content.startswith("{"):
+                # Find matching closing brace for first object
+                depth = 0
+                end_idx = 0
+                for i, char in enumerate(content):
+                    if char == "{":
+                        depth += 1
+                    elif char == "}":
+                        depth -= 1
+                        if depth == 0:
+                            end_idx = i + 1
+                            break
+                if end_idx > 0:
+                    content = content[:end_idx]
+            
+            data = json.loads(content)
             
             return {
                 "action": data.get("action", "speak"),
@@ -173,10 +192,17 @@ class Brain:
                 "response": data.get("response", "Done")
             }
         except json.JSONDecodeError:
+            # If JSON parsing fails, treat as plain text response
+            # But clean up any JSON-like content
+            clean = content
+            if "{" in clean:
+                clean = clean.split("{")[0].strip()
+            if not clean or clean.startswith("{"):
+                clean = "I processed your request."
             return {
                 "action": "speak",
                 "target": None,
-                "response": content if content else "I didn't understand that."
+                "response": clean
             }
     
     def clear_memory(self) -> None:

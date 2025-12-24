@@ -41,7 +41,17 @@ desktop.ini
 # Project specific
 *.log
 *.wav
-test_voice.wav
+*.mp3
+test_*.py
+check_*.py
+
+# PyInstaller
+*.spec
+build/
+dist/
+
+# Data files (persistent storage)
+data/
 
 # Large model files (download separately)
 # voices/*.onnx
