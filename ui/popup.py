@@ -179,9 +179,13 @@ class PopupWindow:
         self._root.mainloop()
     
     def show(self) -> None:
-        """Show popup and start animation."""
+        """Show popup and start animation (thread-safe)."""
         if self._root and not self._visible:
-            self._root.after(0, self._do_show)
+            try:
+                self._root.after(0, self._do_show)
+            except RuntimeError:
+                # Called from wrong thread - ignore
+                pass
     
     def _do_show(self) -> None:
         self._root.deiconify()
@@ -194,9 +198,12 @@ class PopupWindow:
         self._animate_gif()
     
     def hide(self) -> None:
-        """Hide popup."""
+        """Hide popup (thread-safe)."""
         if self._root and self._visible:
-            self._root.after(0, self._do_hide)
+            try:
+                self._root.after(0, self._do_hide)
+            except RuntimeError:
+                pass
     
     def _do_hide(self) -> None:
         self._playing = False
@@ -206,18 +213,27 @@ class PopupWindow:
     
     def set_text(self, text: str) -> None:
         if self._main_label:
-            self._root.after(0, lambda: self._main_label.configure(text=text))
+            try:
+                self._root.after(0, lambda: self._main_label.configure(text=text))
+            except RuntimeError:
+                pass
     
     def set_status(self, status: str) -> None:
         if self._status_label:
-            self._root.after(0, lambda: self._status_label.configure(text=status))
+            try:
+                self._root.after(0, lambda: self._status_label.configure(text=status))
+            except RuntimeError:
+                pass
     
     def set_speaking(self, speaking: bool) -> None:
         self._speaking = speaking
     
     def hide_after(self, ms: int) -> None:
         if self._root:
-            self._root.after(ms, self._do_hide)
+            try:
+                self._root.after(ms, self._do_hide)
+            except RuntimeError:
+                pass
     
     def quit(self) -> None:
         self._playing = False

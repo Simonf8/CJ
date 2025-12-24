@@ -11,6 +11,12 @@ from datetime import datetime
 from .memory import Memory
 from .commands import CustomCommands
 
+try:
+    from skills import SkillManager
+    SKILLS_AVAILABLE = True
+except ImportError:
+    SKILLS_AVAILABLE = False
+
 
 class Action(TypedDict):
     action: str
@@ -57,30 +63,43 @@ User: "take a screenshot" -> {"action": "screenshot", "target": null, "response"
 User: "shut down" -> {"action": "shutdown", "target": null, "response": "Shutting down in 5 seconds"}
 User: "restart computer" -> {"action": "restart", "target": null, "response": "Restarting in 5 seconds"}
 
-Be concise and helpful. Use context from previous messages when relevant.
+Be helpful and conversational. Remember previous context and be personable.
+When the user asks follow-up questions, use the conversation history to give relevant answers.
+You can use informal language and be friendly. Call the user by name if you know it.
 """
 
 
 class Brain:
     """Ollama-powered command processor with memory and custom commands."""
     
-    def __init__(self, model: str = "llama3.2"):
+    def __init__(self, model: str = "qwen2.5:7b"):
         self.model = model
         self.client = ollama.Client()
-        self.memory = Memory(max_messages=10)
+        self.memory = Memory(max_messages=30)  # Longer conversation memory
         self.custom_commands = CustomCommands()
+        
+        # Initialize skills
+        if SKILLS_AVAILABLE:
+            self.skills = SkillManager()
+        else:
+            self.skills = None
     
     def process(self, command: str) -> Action:
         """Process a voice command and return structured action."""
         # Check for custom commands first
         custom_actions = self.custom_commands.get_command(command)
         if custom_actions:
-            # Return the first action; main.py will handle multiple
             return {
                 "action": "custom",
                 "target": custom_actions,
                 "response": f"Executing {command}"
             }
+        
+        # Check if any skill can handle this
+        if self.skills:
+            skill_result = self.skills.execute(command)
+            if skill_result:
+                return skill_result
         
         # Add to memory
         self.memory.add_user_message(command)
@@ -96,8 +115,16 @@ class Brain:
         for msg in self.memory.get_context()[:-1]:  # Exclude the current message
             messages.append(msg)
         
-        # Add current command with time context
-        user_msg = f"Current time: {current_time}, Date: {current_date}\n\nUser command: {command}"
+        # Add current command with time context and knowledge
+        user_msg = f"Current time: {current_time}, Date: {current_date}\n"
+        
+        # Add skills context (knowledge base, timers, etc.)
+        if self.skills:
+            skills_context = self.skills.get_all_context()
+            if skills_context:
+                user_msg += f"\n{skills_context}\n"
+        
+        user_msg += f"\nUser command: {command}"
         messages.append({"role": "user", "content": user_msg})
         
         try:
