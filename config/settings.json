@@ -1,0 +1,26 @@
+{
+  "assistant": {
+    "name": "Simon",
+    "user_name": ""
+  },
+  "llm": {
+    "model": "llama3.2"
+  },
+  "voice": {
+    "engine": "auto",
+    "edge_voice": "en-GB-RyanNeural"
+  },
+  "listening": {
+    "hotkey": "ctrl+space",
+    "wake_word_enabled": true
+  },
+  "hud": {
+    "fullscreen": false,
+    "auto_hide": true,
+    "sound_effects": true
+  },
+  "weather": {
+    "location": "London",
+    "units": "metric"
+  }
+}

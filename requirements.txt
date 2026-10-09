@@ -1,25 +1,21 @@
 # Core
-SpeechRecognition==3.14.4
-PyAudio==0.2.14
-pyttsx3==2.99
-ollama==0.6.1
+ollama>=0.6
+pywebview>=5.3
+psutil>=6.0
+Pillow>=10.0
+numpy>=1.26
 
-# TTS
-edge-tts
-pygame
+# Voice
+SpeechRecognition>=3.14
+PyAudio>=0.2.14
+edge-tts>=7.0
+pygame>=2.6
+pyttsx3>=2.98
 
-# UI
-customtkinter==5.2.2
-Pillow==11.3.0
-pystray==0.19.5
-
-# Hotkeys and Automation
-keyboard==0.13.5
-PyAutoGUI==0.9.54
-
-# Audio Control
-pycaw==20251023
-comtypes==1.4.14
-
-# Video/Image Processing
-opencv-python==4.12.0.88
+# Desktop control
+keyboard>=0.13.5
+PyAutoGUI>=0.9.54
+pycaw>=20240316; sys_platform == "win32"
+comtypes>=1.4; sys_platform == "win32"
+pystray>=0.19.5
+Send2Trash>=1.8
