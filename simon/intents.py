@@ -10,6 +10,7 @@ from .plan import Plan
 KNOWN_FOLDERS = {"downloads", "documents", "desktop", "pictures", "music", "videos", "home"}
 _URL_RE = re.compile(r"^(https?://)?[\w-]+(\.[\w-]+)+(/\S*)?$")
 _POLITE = r"(?:(?:can|could|would|will) you\s+)?(?:please\s+)?"
+_NOT_APPS = re.compile(r"\b(?:diagnostics?|scan|system (?:check|report|status)|timer|countdown)\b")
 _TAIL = r"(?:\s+(?:please|for me|now|thanks))*[.!?]*$"
 
 
@@ -146,7 +147,7 @@ class IntentMatcher:
 
     def _open(self, target: str) -> Optional[Plan]:
         target = target.strip()
-        if not target or len(target.split()) > 4:
+        if not target or len(target.split()) > 4 or _NOT_APPS.search(target):
             return None
         bare = re.sub(r"^(?:my |the )", "", target).replace(" folder", "").strip()
         if bare in KNOWN_FOLDERS:

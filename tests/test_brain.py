@@ -29,6 +29,17 @@ def test_local_intents(brain, text, expected):
     assert plan.source == "intent"
 
 
+@pytest.mark.parametrize("text, skill", [
+    ("run diagnostics", "skill:system"),
+    ("run a system check", "skill:system"),
+    ("start a timer for 5 minutes", "skill:timer"),
+])
+def test_launch_verbs_defer_to_skills(brain, text, skill):
+    plan = brain.think(text)
+    assert plan.source == skill and not plan.actions
+    brain.think("cancel all timers")
+
+
 def test_time_answers_without_llm(brain):
     plan = brain.think("what time is it")
     assert plan.response.startswith("It's") and not plan.actions
