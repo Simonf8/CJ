@@ -1,3 +1,5 @@
+import { HoloAvatar } from "./avatar.js";
+
 const TAU = Math.PI * 2;
 
 const PALETTE = {
@@ -33,6 +35,8 @@ export class Reactor {
     this.ripples = [];
     this.lastRipple = 0;
     this.sparks = Array.from({ length: 46 }, (_, i) => ({ a: Math.random() * TAU, r: 0.68 + Math.random() * 0.22, s: 0.2 + Math.random() * 0.8, z: Math.random() }));
+    this.avatar = new HoloAvatar();
+    this.showAvatar = true;
     this.resize();
     new ResizeObserver(() => this.resize()).observe(canvas);
     this.last = performance.now();
@@ -76,7 +80,7 @@ export class Reactor {
     const goal = Math.max(this.target, idleBreath, thinkPulse);
     this.level = lerp(this.level, goal, goal > this.level ? 0.45 : 0.12);
     this.angle += dt * this.spin;
-    if (this.ignitedAt !== null) this.ignition = Math.min(1, (now - this.ignitedAt) / 1800);
+    if (this.ignitedAt !== null) this.ignition = Math.min(1, (now - this.ignitedAt) / 2400);
 
     if (this.state === "listening" && now - this.lastRipple > 700 - this.level * 400) {
       this.ripples.push({ t: 0, strength: 0.6 + this.level });
@@ -114,9 +118,14 @@ export class Reactor {
     this.drawBars(R * 0.6, R * 0.26, L, t, this.stage(0.25));
     this.drawDashed(R * 0.56, a * 0.6, this.stage(0.3));
     this.drawSparks(R, t, this.stage(0.4));
-    this.drawCoil(R * 0.43, -a * 0.25, L, this.stage(0.45));
-    this.drawInner(R * 0.3, a * 1.4, this.stage(0.55));
-    this.drawCore(R * 0.2, L, t, this.stage(0.6));
+    if (this.showAvatar) {
+      this.drawBacklight(R, L, this.stage(0.4));
+      this.avatar.draw(ctx, { R, t, level: L, state: this.state, rgba: (al, mix) => this.rgba(al, mix), reveal: this.stage(0.4, 0.6) });
+    } else {
+      this.drawCoil(R * 0.43, -a * 0.25, L, this.stage(0.45));
+      this.drawInner(R * 0.3, a * 1.4, this.stage(0.55));
+      this.drawCore(R * 0.2, L, t, this.stage(0.6));
+    }
     ctx.restore();
   }
 
@@ -297,6 +306,18 @@ export class Reactor {
       ctx.arc(x, y, 0.6 + p.z * 1.6, 0, TAU);
       ctx.fill();
     }
+  }
+
+  drawBacklight(R, L, s) {
+    if (!s) return;
+    const { ctx } = this;
+    const g = ctx.createRadialGradient(0, -R * 0.06, 0, 0, -R * 0.06, R * 0.55);
+    g.addColorStop(0, this.rgba((0.16 + L * 0.12) * s));
+    g.addColorStop(1, this.rgba(0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, -R * 0.06, R * 0.55, 0, TAU);
+    ctx.fill();
   }
 
   drawCoil(r, rot, L, s) {

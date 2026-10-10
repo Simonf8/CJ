@@ -19,16 +19,17 @@ A cinematic, voice-driven desktop assistant for Windows, powered by a local LLM.
 
 ## Overview
 
-Say **“Hey Simon”** or press <kbd>Ctrl</kbd> + <kbd>Space</kbd>, and a holographic HUD comes up with a live arc-reactor core that moves with the voice. Simon listens, thinks with a local model through Ollama, replies in a British neural voice, and controls the desktop.
+Say **“Hey Simon”** or press <kbd>Ctrl</kbd> + <kbd>Space</kbd>, and a holographic HUD comes up with Simon's avatar: a floating hologram head, projected above a reactor ring, that speaks with Simon's voice. Simon listens, thinks with a local model through Ollama, replies in a British neural voice, and controls the desktop.
 
 | | |
 |---|---|
 | <img src="docs/listening.webp" alt="Listening"> | <img src="docs/thinking.webp" alt="Thinking"> |
-| **Listening**: the core ripples with your microphone level | **Processing**: amber spin-up while the model thinks |
+| **Listening**: the rings ripple with your microphone level | **Processing**: the avatar turns amber while the model thinks |
 
 ## Features
 
-- **Cinematic HUD**: boot sequence, reactive reactor core, system telemetry, weather, comms log, countdown timers, alerts and a shutdown sequence overlay
+- **Holographic avatar**: a scan-line head that materializes on startup, floats, blinks, turns as it thinks and moves its mouth with the voice
+- **Cinematic HUD**: boot sequence, audio-reactive rings, system telemetry, weather, comms log, countdown timers, alerts and a shutdown sequence overlay
 - **Hands-free**: wake word, push-to-talk hotkey, and follow-up listening without saying the wake word again
 - **Fast**: common commands are matched locally and answer instantly; only open-ended requests go to the LLM
 - **Degrades gracefully**: if Ollama is down, Simon keeps working on local intents; the voice falls back from Edge to Piper (`voices/jarvis.onnx`) to the system voice
@@ -58,7 +59,7 @@ Then double-click **`Start Simon.bat`**.
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-ollama pull llama3.2
+ollama pull gemma4:e4b-it-qat
 python main.py
 ```
 
@@ -98,10 +99,10 @@ python main.py
 ```json
 {
   "assistant": { "name": "Simon" },
-  "llm":       { "model": "llama3.2" },
+  "llm":       { "model": "gemma4:e4b-it-qat" },
   "voice":     { "edge_voice": "en-GB-RyanNeural" },
   "listening": { "hotkey": "ctrl+space", "wake_word_enabled": true },
-  "hud":       { "fullscreen": false, "auto_hide": true, "accent": "#00e5ff" },
+  "hud":       { "fullscreen": false, "avatar": true, "accent": "#00e5ff" },
   "weather":   { "location": "London", "units": "metric" }
 }
 ```

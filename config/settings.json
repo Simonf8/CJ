@@ -4,7 +4,7 @@
     "user_name": ""
   },
   "llm": {
-    "model": "llama3.2"
+    "model": "gemma4:e4b-it-qat"
   },
   "voice": {
     "engine": "auto",
@@ -17,7 +17,8 @@
   "hud": {
     "fullscreen": false,
     "auto_hide": true,
-    "sound_effects": true
+    "sound_effects": true,
+    "avatar": true
   },
   "weather": {
     "location": "London",

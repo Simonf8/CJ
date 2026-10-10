@@ -54,7 +54,7 @@ class Brain:
 
     @property
     def model(self) -> str:
-        return self.settings.get("llm.model", "llama3.2")
+        return self.settings.get("llm.model", "gemma4:e4b-it-qat")
 
     def start(self) -> None:
         self.skills.start()

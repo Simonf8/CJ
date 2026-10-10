@@ -26,7 +26,7 @@ DEFAULTS: Dict[str, Any] = {
     },
     "llm": {
         "enabled": True,
-        "model": "llama3.2",
+        "model": "gemma4:e4b-it-qat",
         "host": "",
         "temperature": 0.4,
         "timeout": 30,
@@ -58,6 +58,7 @@ DEFAULTS: Dict[str, Any] = {
         "auto_hide_delay": 8.0,
         "sound_effects": True,
         "accent": "#00e5ff",
+        "avatar": True,
     },
     "weather": {"location": "London", "units": "metric"},
     "safety": {"confirm_power_actions": True, "power_delay": 10},
@@ -119,4 +120,5 @@ class Settings:
             "location": self.get("weather.location"),
             "sound_effects": self.get("hud.sound_effects"),
             "accent": self.get("hud.accent"),
+            "avatar": self.get("hud.avatar"),
         }

@@ -93,6 +93,7 @@ function applyConfig(c) {
   $("ro-voice").textContent = (c.voice || "—").replace(/Neural$/, "").replace(/^[a-z]{2}-[A-Z]{2}-/, "");
   $("console-input").placeholder = `Type a command, or say “Hey ${c.name || "Simon"}”…`;
   sfx.enabled = c.sound_effects !== false;
+  reactor.showAvatar = c.avatar !== false;
   if (c.accent && /^#[0-9a-f]{6}$/i.test(c.accent)) {
     const n = parseInt(c.accent.slice(1), 16);
     document.documentElement.style.setProperty("--accent", c.accent);
