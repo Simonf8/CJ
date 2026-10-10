@@ -1,12 +1,25 @@
 {
-  "goodnight": [
-    { "action": "lock_screen", "target": null },
-    { "action": "volume_mute", "target": null }
-  ],
-  "morning": [
-    { "action": "open_url", "target": "https://weather.com" },
-    { "action": "open_app", "target": "chrome" }
-  ],
-  "focus mode": [{ "action": "volume_set", "target": "20" }],
-  "break": [{ "action": "open_url", "target": "https://youtube.com" }]
+  "goodnight": {
+    "response": "Goodnight, sir. Locking up and going quiet.",
+    "actions": [{ "action": "volume_mute" }, { "action": "lock_screen" }]
+  },
+  "good morning protocol": {
+    "response": "Morning protocol engaged. Pulling up the news and your inbox.",
+    "actions": [
+      { "action": "open_url", "target": "https://news.google.com" },
+      { "action": "open_url", "target": "https://mail.google.com" }
+    ]
+  },
+  "focus mode": {
+    "response": "Focus mode. Volume down, distractions off.",
+    "actions": [{ "action": "volume_set", "target": "20" }]
+  },
+  "take a break": {
+    "response": "You've earned it.",
+    "actions": [{ "action": "open_url", "target": "https://youtube.com" }]
+  },
+  "house party protocol": {
+    "response": "House party protocol, sir. Turning it up.",
+    "actions": [{ "action": "volume_set", "target": "80" }, { "action": "open_app", "target": "spotify" }]
+  }
 }

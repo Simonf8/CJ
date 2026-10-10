@@ -1,3 +1,7 @@
 @echo off
 cd /d "%~dp0"
-start /min pythonw main.py
+if exist ".venv\Scripts\pythonw.exe" (
+    start "" ".venv\Scripts\pythonw.exe" main.py %*
+) else (
+    start "" pythonw main.py %*
+)
