@@ -4,19 +4,23 @@ import asyncio
 import logging
 import math
 import os
+import queue
 import random
 import tempfile
 import threading
 import time
 import wave
-from typing import List, Optional
+from typing import Iterator, List, Optional
 
 from ..config import VOICES_DIR, Settings
 from ..events import EventBus
+from . import kokoro
+from .kokoro import KokoroVoice
 
 log = logging.getLogger(__name__)
 
 FPS = 30
+ENGINES = ("kokoro", "edge", "piper", "system")
 
 
 class Speaker:
@@ -27,22 +31,33 @@ class Speaker:
         self._lock = threading.Lock()
         self._stop = threading.Event()
         self._piper = None
+        self._kokoro: Optional[KokoroVoice] = None
+        self._engine = ""
+
+    def start(self) -> None:
+        threading.Thread(target=self._prepare_kokoro, name="kokoro-prep", daemon=True).start()
 
     def speak(self, text: str) -> None:
         if not text:
             return
         with self._lock:
             self._stop.clear()
-            path = None if self.muted else self._synthesize(text)
             try:
-                if path:
-                    self._play(path, text)
-                else:
+                if self.muted:
+                    self._simulate(text)
+                    return
+                spoke = False
+                for path in self._render(text):
+                    try:
+                        if not self._stop.is_set():
+                            self._play(path)
+                            spoke = True
+                    finally:
+                        _remove(path)
+                if not spoke and not self._stop.is_set():
                     self._simulate(text)
             finally:
                 self.bus.publish("level", source="voice", value=0.0)
-                if path:
-                    _remove(path)
 
     def stop(self) -> None:
         self._stop.set()
@@ -51,18 +66,108 @@ class Speaker:
     def busy(self) -> bool:
         return self._lock.locked()
 
-    def _synthesize(self, text: str) -> Optional[str]:
+    def _order(self) -> List[str]:
         engine = self.settings.get("voice.engine", "auto")
-        order = {"edge": ["edge"], "piper": ["piper"], "system": ["system"]}.get(engine, ["edge", "piper", "system"])
-        for name in order:
+        if engine in ENGINES:
+            return [engine]
+        return list(ENGINES)
+
+    def _render(self, text: str) -> Iterator[str]:
+        for name in self._order():
             try:
+                if name == "kokoro":
+                    stream = self._kokoro_stream(text)
+                    first = next(stream)
+                    self._announce("kokoro")
+                    yield first
+                    yield from stream
+                    return
                 path = getattr(self, f"_tts_{name}")(text)
                 if path and os.path.getsize(path) > 0:
-                    return path
+                    self._announce(name)
+                    yield path
+                    return
+                _remove(path)
+            except StopIteration:
+                return
             except Exception as exc:
-                log.debug("TTS engine %s failed: %s", name, exc)
+                log.debug("TTS engine %s unavailable: %s", name, exc)
         log.warning("No TTS engine available — speaking silently")
-        return None
+
+    def _announce(self, engine: str) -> None:
+        if engine == self._engine:
+            return
+        self._engine = engine
+        label = {
+            "kokoro": f"Kokoro · {self.settings.get('voice.kokoro_voice', 'bm_george')[3:].title()}",
+            "edge": self.settings.get("voice.edge_voice", "en-GB-RyanNeural").split("-")[-1].replace("Neural", ""),
+            "piper": "Piper · Offline",
+            "system": "System",
+        }[engine]
+        self.bus.publish("status", voice=label)
+
+    def _kokoro_voice(self) -> KokoroVoice:
+        if self._kokoro is None:
+            if not kokoro.available():
+                raise ImportError("kokoro-onnx is not installed")
+            self._kokoro = KokoroVoice(
+                self.settings.get("voice.kokoro_voice", "bm_george"),
+                float(self.settings.get("voice.kokoro_speed", 1.0)),
+            )
+        self._kokoro.load()
+        return self._kokoro
+
+    def _prepare_kokoro(self) -> None:
+        if "kokoro" not in self._order() or not kokoro.available():
+            return
+        try:
+            if not kokoro.installed():
+                self.bus.publish("notify", level="info", title="VOICE UPGRADE",
+                                 text="Downloading the Kokoro offline voice (~350 MB) in the background.")
+                kokoro.download()
+                self.bus.publish("notify", level="info", title="VOICE UPGRADE", text="Kokoro voice installed.")
+            self._kokoro_voice()
+            log.info("Kokoro voice ready")
+        except Exception as exc:
+            log.warning("Kokoro voice unavailable: %s", exc)
+
+    def _kokoro_stream(self, text: str) -> Iterator[str]:
+        voice = self._kokoro_voice()
+        chunks: "queue.Queue[object]" = queue.Queue(maxsize=3)
+
+        def produce() -> None:
+            try:
+                for samples, rate in voice.stream(text):
+                    if self._stop.is_set():
+                        break
+                    chunks.put(_write_wav(samples, rate))
+            except Exception as exc:
+                chunks.put(exc)
+            finally:
+                chunks.put(None)
+
+        threading.Thread(target=produce, name="kokoro-tts", daemon=True).start()
+        first = True
+        try:
+            while True:
+                item = chunks.get()
+                if item is None:
+                    return
+                if isinstance(item, Exception):
+                    if first:
+                        raise item
+                    log.warning("Kokoro stopped mid-sentence: %s", item)
+                    return
+                first = False
+                yield item
+        finally:
+            while True:
+                try:
+                    item = chunks.get_nowait()
+                except queue.Empty:
+                    break
+                if isinstance(item, str):
+                    _remove(item)
 
     def _tts_edge(self, text: str) -> str:
         import edge_tts
@@ -100,7 +205,7 @@ class Speaker:
         engine.runAndWait()
         return path
 
-    def _play(self, path: str, text: str) -> None:
+    def _play(self, path: str) -> None:
         import pygame
 
         if not pygame.mixer.get_init():
@@ -155,13 +260,28 @@ def _fake_envelope(duration: float) -> List[float]:
     return out
 
 
+def _write_wav(samples, rate: int) -> str:
+    import numpy as np
+
+    path = _temp(".wav")
+    pcm = (np.clip(samples, -1.0, 1.0) * 32767).astype(np.int16)
+    with wave.open(path, "wb") as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(rate)
+        wav.writeframes(pcm.tobytes())
+    return path
+
+
 def _temp(suffix: str) -> str:
     fd, path = tempfile.mkstemp(prefix="simon_", suffix=suffix)
     os.close(fd)
     return path
 
 
-def _remove(path: str) -> None:
+def _remove(path: Optional[str]) -> None:
+    if not path:
+        return
     try:
         os.unlink(path)
     except OSError:

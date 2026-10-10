@@ -8,6 +8,7 @@
   },
   "voice": {
     "engine": "auto",
+    "kokoro_voice": "bm_george",
     "edge_voice": "en-GB-RyanNeural"
   },
   "listening": {
@@ -18,7 +19,8 @@
     "fullscreen": false,
     "auto_hide": true,
     "sound_effects": true,
-    "avatar": true
+    "avatar": true,
+    "desktop_avatar": true
   },
   "weather": {
     "location": "London",

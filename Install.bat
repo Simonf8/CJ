@@ -8,6 +8,8 @@ call .venv\Scripts\activate.bat
 python -m pip install --upgrade pip >nul
 pip install -r requirements.txt || goto :error
 echo.
+python -m simon.speech.kokoro
+echo.
 where ollama >nul 2>nul && ollama pull gemma4:e4b-it-qat
 echo.
 echo   Done. Double-click "Start Simon.bat" to launch.

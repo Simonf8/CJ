@@ -37,6 +37,8 @@ DEFAULTS: Dict[str, Any] = {
         "rate": "+4%",
         "pitch": "-2Hz",
         "piper_model": "jarvis.onnx",
+        "kokoro_voice": "bm_george",
+        "kokoro_speed": 1.0,
     },
     "listening": {
         "wake_words": ["hey simon", "simon", "hey saimon", "saimon", "okay simon"],
@@ -59,6 +61,7 @@ DEFAULTS: Dict[str, Any] = {
         "sound_effects": True,
         "accent": "#00e5ff",
         "avatar": True,
+        "desktop_avatar": True,
     },
     "weather": {"location": "London", "units": "metric"},
     "safety": {"confirm_power_actions": True, "power_delay": 10},

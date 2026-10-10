@@ -15,6 +15,7 @@ from .server import HudServer
 from .speech.listener import Listener, split_wake_word
 from .speech.speaker import Speaker
 from .telemetry import TelemetryFeed
+from .ui.desktop_avatar import DesktopAvatar
 from .ui.tray import Tray
 from .ui.window import HudWindow
 
@@ -49,6 +50,10 @@ class Simon:
         self.window_mode = window_mode
         self.tray = Tray(self.name, on_open=self.show, on_talk=self.activate, on_pause=self._set_paused, on_quit=self.quit)
         self.use_mic = use_mic
+        self.desktop_avatar = (
+            DesktopAvatar(self.bus, on_talk=self.activate, on_open=self.show)
+            if settings.get("hud.desktop_avatar", True) and window_mode != "none" else None
+        )
 
         self.state = "booting"
         self._jobs: "queue.Queue[tuple]" = queue.Queue()
@@ -69,8 +74,11 @@ class Simon:
         self.bus.publish("config", version=__version__, codename=CODENAME, expansion=EXPANSION, **self.settings.public())
         self._set_state("booting")
         self.telemetry.start()
+        self.speaker.start()
         self.brain.start()
         self.tray.start()
+        if self.desktop_avatar:
+            self.desktop_avatar.start()
         threading.Thread(target=self._worker, name="worker", daemon=True).start()
 
         mic_ok = False
@@ -153,7 +161,8 @@ class Simon:
                 continue
             self._busy.set()
             self._cancel_hide()
-            self.show()
+            if job[0] != "say":
+                self.show()
             try:
                 kind = job[0]
                 if kind == "listen":
@@ -252,6 +261,8 @@ class Simon:
         self.speaker.stop()
         self.telemetry.stop()
         self.tray.stop()
+        if self.desktop_avatar:
+            self.desktop_avatar.stop()
         try:
             import keyboard
 

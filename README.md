@@ -19,7 +19,7 @@ A cinematic, voice-driven desktop assistant for Windows, powered by a local LLM.
 
 ## Overview
 
-Say **“Hey Simon”** or press <kbd>Ctrl</kbd> + <kbd>Space</kbd>, and a holographic HUD comes up with Simon's avatar: a floating hologram head, projected above a reactor ring, that speaks with Simon's voice. Simon listens, thinks with a local model through Ollama, replies in a British neural voice, and controls the desktop.
+Say **“Hey Simon”** or press <kbd>Ctrl</kbd> + <kbd>Space</kbd>, and a holographic HUD comes up with Simon's avatar: a floating hologram head, projected above a reactor ring, that speaks with Simon's voice. Simon listens, thinks with a local model through Ollama, replies in a British neural voice, and controls the desktop. When the HUD is hidden, a small hologram of Simon floats on your desktop.
 
 | | |
 |---|---|
@@ -29,10 +29,12 @@ Say **“Hey Simon”** or press <kbd>Ctrl</kbd> + <kbd>Space</kbd>, and a holog
 ## Features
 
 - **Holographic avatar**: a scan-line head that materializes on startup, floats, blinks, turns as it thinks and moves its mouth with the voice
+- **Desktop companion**: when the HUD hides, a mini hologram floats on the desktop: click to talk, double-click for the HUD, drag to move
 - **Cinematic HUD**: boot sequence, audio-reactive rings, system telemetry, weather, comms log, countdown timers, alerts and a shutdown sequence overlay
 - **Hands-free**: wake word, push-to-talk hotkey, and follow-up listening without saying the wake word again
 - **Fast**: common commands are matched locally and answer instantly; only open-ended requests go to the LLM
-- **Degrades gracefully**: if Ollama is down, Simon keeps working on local intents; the voice falls back from Edge to Piper (`voices/jarvis.onnx`) to the system voice
+- **Offline voice**: [Kokoro](https://github.com/thewh1teagle/kokoro-onnx) speaks as soon as the first sentence is ready, with Edge, Piper and the system voice as fallbacks
+- **Degrades gracefully**: if Ollama is down, Simon keeps working on local intents
 - **Desktop control**: apps (including fuzzy Start Menu search), websites, search, volume, media keys, screenshots, lock, power
 - **Skills**: timers and reminders, weather, diagnostics, long-term memory, and desktop file management
 - **Safety**: power actions need spoken confirmation, deleted files go to the Recycle Bin, and the HUD API is token-protected and bound to localhost
@@ -50,7 +52,7 @@ Install.bat
 
 Then double-click **`Start Simon.bat`**.
 
-> Speech recognition and the Edge voice need an internet connection. For an offline voice, run `pip install piper-tts`.
+> The installer downloads the Kokoro voice (~350 MB) and the Gemma 4 model. Speech recognition still needs an internet connection.
 
 <details>
 <summary>Manual install</summary>
@@ -59,6 +61,7 @@ Then double-click **`Start Simon.bat`**.
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+python -m simon.speech.kokoro
 ollama pull gemma4:e4b-it-qat
 python main.py
 ```
@@ -100,12 +103,14 @@ python main.py
 {
   "assistant": { "name": "Simon" },
   "llm":       { "model": "gemma4:e4b-it-qat" },
-  "voice":     { "edge_voice": "en-GB-RyanNeural" },
+  "voice":     { "engine": "auto", "kokoro_voice": "bm_george" },
   "listening": { "hotkey": "ctrl+space", "wake_word_enabled": true },
-  "hud":       { "fullscreen": false, "avatar": true, "accent": "#00e5ff" },
+  "hud":       { "avatar": true, "desktop_avatar": true, "accent": "#00e5ff" },
   "weather":   { "location": "London", "units": "metric" }
 }
 ```
+
+Kokoro British voices: `bm_george`, `bm_fable`, `bm_lewis`, `bm_daniel`, `bf_emma`, `bf_isabella`, `bf_alice`, `bf_lily`. Set `"engine"` to `"edge"`, `"kokoro"`, `"piper"` or `"system"` to force one.
 
 See [`simon/config.py`](simon/config.py) for every option and its default.
 
@@ -156,9 +161,9 @@ simon/
 ├── intents.py      instant offline command matching
 ├── executor.py     desktop actions
 ├── server.py       HUD server (static files, SSE, API)
-├── speech/         microphone, wake word, neural TTS
+├── speech/         microphone, wake word, Kokoro and Edge TTS
 ├── skills/         timer · weather · knowledge · system · files
-└── ui/             native window and tray icon
+└── ui/             native window, desktop hologram, tray icon
 hud/                the interface: reactor, panels, sound effects
 ```
 

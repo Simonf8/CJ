@@ -125,6 +125,7 @@ const handlers = {
   status: e => {
     Object.assign(ctx.lastStatus, e);
     if (e.llm) setDot("llm", e.llm === "online" ? e.model : e.llm, e.llm);
+    if (e.voice) $("ro-voice").textContent = e.voice;
     if (e.mic) {
       setDot("mic", e.mic, e.mic);
       $("ro-mic").textContent = micLabel();
