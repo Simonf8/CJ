@@ -41,8 +41,8 @@ def setup_logging(verbose: bool) -> None:
         datefmt="%H:%M:%S",
         handlers=handlers,
     )
-    for noisy in ("urllib3", "httpx", "httpcore", "PIL", "comtypes", "asyncio"):
-        logging.getLogger(noisy).setLevel(logging.WARNING)
+    for noisy in ("urllib3", "httpx", "httpcore", "PIL", "comtypes", "asyncio", "phonemizer"):
+        logging.getLogger(noisy).setLevel(logging.ERROR)
 
 
 def main() -> None:
